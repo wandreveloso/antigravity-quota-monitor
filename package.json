@@ -1,0 +1,123 @@
+{
+  "name": "antigravity-quota-monitor",
+  "displayName": "Antigravity Quota & Context Monitor",
+  "description": "Real-time AI quota, weekly expiration, session context tokens, disk cache cleaner & compaction for Google Antigravity IDE (v1.107.0+)",
+  "version": "1.2.0",
+  "publisher": "wandreveloso",
+  "author": {
+    "name": "Wandré Veloso",
+    "url": "https://www.linkedin.com/in/wandreveloso/"
+  },
+  "license": "MIT",
+  "icon": "assets/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wandreveloso/antigravity-quota-monitor"
+  },
+  "bugs": {
+    "url": "https://github.com/wandreveloso/antigravity-quota-monitor/issues"
+  },
+  "homepage": "https://github.com/wandreveloso/antigravity-quota-monitor#readme",
+  "keywords": [
+    "antigravity",
+    "antigravity-ide",
+    "gemini",
+    "claude",
+    "quota",
+    "context-window",
+    "prompt-cache",
+    "ai-monitor",
+    "compact"
+  ],
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other",
+    "Machine Learning",
+    "Productivity"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "*",
+    "onCommand:antigravityMonitor.showQuickPick",
+    "onCommand:antigravityMonitor.refresh",
+    "onCommand:antigravityMonitor.cleanCache",
+    "onCommand:antigravityMonitor.compactContext",
+    "onCommand:antigravityMonitor.restartAgent"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "antigravityMonitor.showQuickPick",
+        "title": "Mostrar Cotas e Contexto",
+        "category": "Antigravity Monitor"
+      },
+      {
+        "command": "antigravityMonitor.refresh",
+        "title": "Recarregar Métricas Agora",
+        "category": "Antigravity Monitor"
+      },
+      {
+        "command": "antigravityMonitor.cleanCache",
+        "title": "Limpar Cache e Compactar Armazenamento",
+        "category": "Antigravity Monitor"
+      },
+      {
+        "command": "antigravityMonitor.compactContext",
+        "title": "Compactar Contexto Ativo (/compact)",
+        "category": "Antigravity Monitor"
+      },
+      {
+        "command": "antigravityMonitor.restartAgent",
+        "title": "Reiniciar Serviços do Agente",
+        "category": "Antigravity Monitor"
+      }
+    ],
+    "configuration": {
+      "title": "Antigravity Quota & Context Monitor",
+      "properties": {
+        "antigravityMonitor.pollingInterval": {
+          "type": "number",
+          "default": 30,
+          "minimum": 5,
+          "maximum": 600,
+          "description": "Intervalo em segundos para consulta das cotas do Antigravity."
+        },
+        "antigravityMonitor.displayFormat": {
+          "type": "string",
+          "default": "detailed",
+          "enum": [
+            "detailed",
+            "compact",
+            "weeklyOnly",
+            "classic"
+          ],
+          "enumDescriptions": [
+            "Detalhado com ciclo 5h, cota semanal com data e hora de vencimento, e tokens com % de cache (Ex: Gemini: 84% | Wk: 75% (01/11 12:37) | Claude: 100% | Ctx: 85k (⚡94%))",
+            "Compacto com abreviações e contagem em dias (Ex: G: 84% (Wk: 75% 2d) | C: 100% | Ctx: 85k)",
+            "Foco Semanal com percentual e data de vencimento (Ex: Gemini Wk: 75% (01/11 12:37) | Claude Wk: 100% | Ctx: 85k)",
+            "Clássico minimalista com apenas percentuais de cota 5h e contexto (Ex: Gemini: 84% | Claude: 100% | Ctx: 8%)"
+          ],
+          "description": "Formato de exibição das métricas na barra de status do rodapé."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc --noEmit && node esbuild.config.js",
+    "build": "node esbuild.config.js",
+    "check-types": "tsc --noEmit",
+    "test": "node --test dist/test/normalizer.test.js && node test-runtime.js",
+    "package": "vsce package --no-dependencies --allow-missing-repository --allow-star-activation"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.80.0",
+    "@vscode/vsce": "^2.24.0",
+    "esbuild": "^0.20.0",
+    "typescript": "^5.3.3"
+  }
+}
