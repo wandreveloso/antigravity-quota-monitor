@@ -1,7 +1,7 @@
 # 🪐 Antigravity Quota & Context Monitor
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/wandreveloso/antigravity-quota-monitor/main/assets/icon.png" width="128" height="128" alt="Antigravity Quota Monitor Logo" />
+  <img src="./assets/icon.png" width="128" height="128" alt="Antigravity Quota Monitor Logo" />
 </p>
 
 <p align="center">
