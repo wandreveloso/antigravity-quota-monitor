@@ -10,6 +10,7 @@
 
 <p align="center">
   <a href="https://antigravity.google"><img src="https://img.shields.io/badge/Antigravity%20IDE-v1.107.0%2B%20Compatible-00d2ff?style=for-the-badge&logo=google&logoColor=white" alt="Antigravity Compatibility" /></a>
+  <a href="https://open-vsx.org/extension/wandreveloso/antigravity-quota-monitor"><img src="https://img.shields.io/badge/Open%20VSX-Published-purple?style=for-the-badge&logo=eclipseide&logoColor=white" alt="Open VSX" /></a>
   <a href="package.json"><img src="https://img.shields.io/badge/Version-1.2.0-38ef7d?style=for-the-badge" alt="Version 1.2.0" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-f72585?style=for-the-badge" alt="License MIT" /></a>
   <a href="https://github.com/wandreveloso"><img src="https://img.shields.io/badge/GitHub-wandreveloso-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub" /></a>
