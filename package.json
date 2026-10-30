@@ -111,7 +111,10 @@
     "build": "node esbuild.config.js",
     "check-types": "tsc --noEmit",
     "test": "node --test dist/test/normalizer.test.js && node test-runtime.js",
-    "package": "vsce package --no-dependencies --allow-missing-repository --allow-star-activation"
+    "package": "vsce package --no-dependencies --allow-missing-repository --allow-star-activation",
+    "deploy": "./deploy.sh",
+    "publish:marketplace": "vsce publish",
+    "publish:openvsx": "ovsx publish"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
