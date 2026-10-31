@@ -53,20 +53,23 @@ export class StatusBarProvider implements vscode.Disposable {
     const ctxTokensFmt =
       ctxTotal >= 1000 ? `${(ctxTotal / 1000).toFixed(ctxTotal >= 10000 ? 0 : 1)}k` : `${ctxTotal}`;
 
+    const gemLongTag = snapshot.geminiLongWindowLabel || 'Wk';
+    const cldLongTag = snapshot.claudeLongWindowLabel || 'Wk';
+
     // Format text based on user preference
     switch (displayFormat) {
       case 'compact':
-        this.statusBarItem.text = `G: ${geminiPct}% (Wk: ${geminiWkPct}% ${geminiWkCountdown}) | C: ${claudePct}% | Ctx: ${ctxTokensFmt}`;
+        this.statusBarItem.text = `G: ${geminiPct}% (${gemLongTag}: ${geminiWkPct}% ${geminiWkCountdown}) | C: ${claudePct}% | Ctx: ${ctxTokensFmt}`;
         break;
       case 'weeklyOnly':
-        this.statusBarItem.text = `Gemini Wk: ${geminiWkPct}% (${geminiWkReset}) | Claude Wk: ${claudeWkPct}% | Ctx: ${ctxTokensFmt}`;
+        this.statusBarItem.text = `Gemini ${gemLongTag}: ${geminiWkPct}% (${geminiWkReset}) | Claude ${cldLongTag}: ${claudeWkPct}% | Ctx: ${ctxTokensFmt}`;
         break;
       case 'classic':
         this.statusBarItem.text = `Gemini: ${geminiPct}% | Claude: ${claudePct}% | Ctx: ${ctxPct}%`;
         break;
       case 'detailed':
       default:
-        this.statusBarItem.text = `Gemini: ${geminiPct}% | Wk: ${geminiWkPct}% (${geminiWkReset}) | Claude: ${claudePct}% | Ctx: ${ctxTokensFmt} (⚡${cachePct}%)`;
+        this.statusBarItem.text = `Gemini: ${geminiPct}% | ${gemLongTag}: ${geminiWkPct}% (${geminiWkReset}) | Claude: ${claudePct}% | Ctx: ${ctxTokensFmt} (⚡${cachePct}%)`;
         break;
     }
 

@@ -36,11 +36,15 @@ export interface QuotaSnapshot {
   geminiWeeklyResetIso?: string;
   geminiWeeklyResetFormatted?: string;
   geminiWeeklyCountdown?: string;
+  geminiShortWindowLabel?: string;
+  geminiLongWindowLabel?: string;
 
   claudeWeeklyRemainingPct?: number;
   claudeWeeklyResetIso?: string;
   claudeWeeklyResetFormatted?: string;
   claudeWeeklyCountdown?: string;
+  claudeShortWindowLabel?: string;
+  claudeLongWindowLabel?: string;
 
   cacheHitPct?: number;
   availablePromptCredits?: number;

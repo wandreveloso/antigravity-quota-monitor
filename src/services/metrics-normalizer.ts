@@ -82,37 +82,55 @@ export class MetricsNormalizer {
     const groups: RawQuotaGroup[] = quotaSummary?.response?.groups ?? [];
     const now = Date.now();
 
-    // 1. Gemini Quota
+    // 1. Gemini Quota - Dynamically discover short and long buckets
     const geminiGroup = groups.find(g => (g.displayName || '').toLowerCase().includes('gemini'));
     const geminiBuckets = geminiGroup?.buckets ?? [];
-    const gemini5h = geminiBuckets.find(b => b.window === '5h' || (b.bucketId || '').includes('5h'));
-    const geminiWeekly = geminiBuckets.find(b => b.window === 'weekly' || (b.bucketId || '').includes('weekly'));
+    const geminiShort =
+      geminiBuckets.find(b => b.window === '5h' || (b.bucketId || '').includes('5h')) ||
+      geminiBuckets.find(b => b.window === 'daily' || b.window === 'day' || (b.bucketId || '').includes('daily')) ||
+      geminiBuckets[0];
+    const geminiLong =
+      geminiBuckets.find(b => b.window === 'weekly' || (b.bucketId || '').includes('weekly')) ||
+      geminiBuckets.find(b => b.window === 'monthly' || (b.bucketId || '').includes('monthly')) ||
+      (geminiBuckets.length > 1 ? geminiBuckets[1] : undefined);
 
-    const geminiFrac = gemini5h?.remainingFraction ?? geminiWeekly?.remainingFraction ?? 1.0;
+    const geminiFrac = geminiShort?.remainingFraction ?? geminiLong?.remainingFraction ?? 1.0;
     const geminiRemainingPct = Math.max(0, Math.min(100, Math.round(geminiFrac * 100)));
 
-    const geminiWkFrac = geminiWeekly?.remainingFraction ?? 1.0;
+    const geminiWkFrac = geminiLong?.remainingFraction ?? 1.0;
     const geminiWeeklyRemainingPct = Math.max(0, Math.min(100, Math.round(geminiWkFrac * 100)));
-    const geminiWeeklyResetIso = geminiWeekly?.resetTime;
-    const geminiWeeklyResetFormatted = this.formatLocalResetShort(geminiWeekly?.resetTime);
-    const geminiWeeklyCountdown = this.formatDurationRemaining(geminiWeekly?.resetTime);
+    const geminiWeeklyResetIso = geminiLong?.resetTime;
+    const geminiWeeklyResetFormatted = this.formatLocalResetShort(geminiLong?.resetTime);
+    const geminiWeeklyCountdown = this.formatDurationRemaining(geminiLong?.resetTime);
 
-    // 2. Claude Quota
+    const geminiShortWindowLabel = geminiShort?.window ? (geminiShort.window === '5h' ? '5h' : geminiShort.window === 'daily' ? 'Diário' : geminiShort.window) : '5h';
+    const geminiLongWindowLabel = geminiLong?.window ? (geminiLong.window === 'weekly' ? 'Wk' : geminiLong.window === 'monthly' ? 'Mês' : geminiLong.window) : 'Wk';
+
+    // 2. Claude Quota - Dynamically discover short and long buckets
     const claudeGroup = groups.find(
       g => (g.displayName || '').toLowerCase().includes('claude') || (g.displayName || '').includes('3p')
     );
     const claudeBuckets = claudeGroup?.buckets ?? [];
-    const claude5h = claudeBuckets.find(b => b.window === '5h' || (b.bucketId || '').includes('5h'));
-    const claudeWeekly = claudeBuckets.find(b => b.window === 'weekly' || (b.bucketId || '').includes('weekly'));
+    const claudeShort =
+      claudeBuckets.find(b => b.window === '5h' || (b.bucketId || '').includes('5h')) ||
+      claudeBuckets.find(b => b.window === 'daily' || b.window === 'day' || (b.bucketId || '').includes('daily')) ||
+      claudeBuckets[0];
+    const claudeLong =
+      claudeBuckets.find(b => b.window === 'weekly' || (b.bucketId || '').includes('weekly')) ||
+      claudeBuckets.find(b => b.window === 'monthly' || (b.bucketId || '').includes('monthly')) ||
+      (claudeBuckets.length > 1 ? claudeBuckets[1] : undefined);
 
-    const claudeFrac = claude5h?.remainingFraction ?? claudeWeekly?.remainingFraction ?? 1.0;
+    const claudeFrac = claudeShort?.remainingFraction ?? claudeLong?.remainingFraction ?? 1.0;
     const claudeRemainingPct = Math.max(0, Math.min(100, Math.round(claudeFrac * 100)));
 
-    const claudeWkFrac = claudeWeekly?.remainingFraction ?? 1.0;
+    const claudeWkFrac = claudeLong?.remainingFraction ?? 1.0;
     const claudeWeeklyRemainingPct = Math.max(0, Math.min(100, Math.round(claudeWkFrac * 100)));
-    const claudeWeeklyResetIso = claudeWeekly?.resetTime;
-    const claudeWeeklyResetFormatted = this.formatLocalResetShort(claudeWeekly?.resetTime);
-    const claudeWeeklyCountdown = this.formatDurationRemaining(claudeWeekly?.resetTime);
+    const claudeWeeklyResetIso = claudeLong?.resetTime;
+    const claudeWeeklyResetFormatted = this.formatLocalResetShort(claudeLong?.resetTime);
+    const claudeWeeklyCountdown = this.formatDurationRemaining(claudeLong?.resetTime);
+
+    const claudeShortWindowLabel = claudeShort?.window ? (claudeShort.window === '5h' ? '5h' : claudeShort.window === 'daily' ? 'Diário' : claudeShort.window) : '5h';
+    const claudeLongWindowLabel = claudeLong?.window ? (claudeLong.window === 'weekly' ? 'Wk' : claudeLong.window === 'monthly' ? 'Mês' : claudeLong.window) : 'Wk';
 
     // 3. Resets
     const resets: ResetItem[] = [];
@@ -131,10 +149,20 @@ export class MetricsNormalizer {
       }
     };
 
-    addReset('Gemini (5h)', gemini5h);
-    addReset('Gemini (Weekly)', geminiWeekly);
-    addReset('Claude (5h)', claude5h);
-    addReset('Claude (Weekly)', claudeWeekly);
+    if (geminiShort) addReset(`Gemini (${geminiShortWindowLabel})`, geminiShort);
+    if (geminiLong) addReset(`Gemini (${geminiLongWindowLabel})`, geminiLong);
+    if (claudeShort) addReset(`Claude (${claudeShortWindowLabel})`, claudeShort);
+    if (claudeLong) addReset(`Claude (${claudeLongWindowLabel})`, claudeLong);
+
+    // Dynamic scan of all groups and buckets to capture any custom/tier-specific buckets
+    for (const group of groups) {
+      for (const bucket of group.buckets ?? []) {
+        const bName = `${group.displayName || 'Modelo'} - ${bucket.displayName || bucket.window || 'Cota'}`;
+        if (!resets.some(r => r.resetTimeIso === bucket.resetTime && r.model.includes(group.displayName || ''))) {
+          addReset(bName, bucket);
+        }
+      }
+    }
 
     // Also include individual model configs if present
     const modelConfigs = userStatus?.userStatus?.cascadeModelConfigData?.clientModelConfigs ?? [];
@@ -157,32 +185,32 @@ export class MetricsNormalizer {
     // 4. Pools
     const pools: PoolItem[] = [];
 
-    // Weekly pools
-    if (geminiWeekly) {
-      const frac = geminiWeekly.remainingFraction ?? 1.0;
+    // Long window (Weekly/Monthly) pools
+    if (geminiLong) {
+      const frac = geminiLong.remainingFraction ?? 1.0;
       const used = Math.max(0, Math.min(100, Math.round((1 - frac) * 100)));
       pools.push({
-        name: 'Gemini Weekly Quota',
+        name: `Gemini ${geminiLongWindowLabel} Quota`,
         used,
         total: 100,
-        period: 'weekly',
-        resetTimeIso: geminiWeekly.resetTime,
-        resetTimeFormatted: this.formatLocalResetFull(geminiWeekly.resetTime),
-        countdownFormatted: this.formatDurationRemaining(geminiWeekly.resetTime),
+        period: geminiLong.window === 'monthly' ? 'monthly' : 'weekly',
+        resetTimeIso: geminiLong.resetTime,
+        resetTimeFormatted: this.formatLocalResetFull(geminiLong.resetTime),
+        countdownFormatted: this.formatDurationRemaining(geminiLong.resetTime),
       });
     }
 
-    if (claudeWeekly) {
-      const frac = claudeWeekly.remainingFraction ?? 1.0;
+    if (claudeLong) {
+      const frac = claudeLong.remainingFraction ?? 1.0;
       const used = Math.max(0, Math.min(100, Math.round((1 - frac) * 100)));
       pools.push({
-        name: 'Claude Weekly Quota',
+        name: `Claude ${claudeLongWindowLabel} Quota`,
         used,
         total: 100,
-        period: 'weekly',
-        resetTimeIso: claudeWeekly.resetTime,
-        resetTimeFormatted: this.formatLocalResetFull(claudeWeekly.resetTime),
-        countdownFormatted: this.formatDurationRemaining(claudeWeekly.resetTime),
+        period: claudeLong.window === 'monthly' ? 'monthly' : 'weekly',
+        resetTimeIso: claudeLong.resetTime,
+        resetTimeFormatted: this.formatLocalResetFull(claudeLong.resetTime),
+        countdownFormatted: this.formatDurationRemaining(claudeLong.resetTime),
       });
     }
 
@@ -233,11 +261,15 @@ export class MetricsNormalizer {
       geminiWeeklyResetIso,
       geminiWeeklyResetFormatted,
       geminiWeeklyCountdown,
+      geminiShortWindowLabel,
+      geminiLongWindowLabel,
 
       claudeWeeklyRemainingPct,
       claudeWeeklyResetIso,
       claudeWeeklyResetFormatted,
       claudeWeeklyCountdown,
+      claudeShortWindowLabel,
+      claudeLongWindowLabel,
 
       cacheHitPct,
       availablePromptCredits: planStatus?.availablePromptCredits,
