@@ -43,6 +43,10 @@ export class StatusBarProvider implements vscode.Disposable {
     const geminiWkReset = snapshot.geminiWeeklyResetFormatted || 'N/A';
     const geminiWkCountdown = snapshot.geminiWeeklyCountdown || 'N/A';
 
+    const argonPct = snapshot.argonRemainingPct;
+    const argonReset = snapshot.argonWeeklyResetFormatted || 'N/A';
+    const argonCountdown = snapshot.argonWeeklyCountdown || 'N/A';
+
     const claudePct = snapshot.claudeRemainingPct;
     const claudeWkPct = snapshot.claudeWeeklyRemainingPct ?? 100;
 
@@ -56,20 +60,23 @@ export class StatusBarProvider implements vscode.Disposable {
     const gemLongTag = snapshot.geminiLongWindowLabel || 'Wk';
     const cldLongTag = snapshot.claudeLongWindowLabel || 'Wk';
 
+    const argonPrefix = argonPct !== undefined ? `Argon: ${argonPct}% | ` : '';
+    const argonCompact = argonPct !== undefined ? `Arg: ${argonPct}% | ` : '';
+
     // Format text based on user preference
     switch (displayFormat) {
       case 'compact':
-        this.statusBarItem.text = `G: ${geminiPct}% (${gemLongTag}: ${geminiWkPct}% ${geminiWkCountdown}) | C: ${claudePct}% | Ctx: ${ctxTokensFmt}`;
+        this.statusBarItem.text = `${argonCompact}G: ${geminiPct}% (${gemLongTag}: ${geminiWkPct}% ${geminiWkCountdown}) | C: ${claudePct}% | Ctx: ${ctxTokensFmt}`;
         break;
       case 'weeklyOnly':
-        this.statusBarItem.text = `Gemini ${gemLongTag}: ${geminiWkPct}% (${geminiWkReset}) | Claude ${cldLongTag}: ${claudeWkPct}% | Ctx: ${ctxTokensFmt}`;
+        this.statusBarItem.text = `${argonPrefix}Gemini ${gemLongTag}: ${geminiWkPct}% (${geminiWkReset}) | Claude ${cldLongTag}: ${claudeWkPct}% | Ctx: ${ctxTokensFmt}`;
         break;
       case 'classic':
         this.statusBarItem.text = `Gemini: ${geminiPct}% | Claude: ${claudePct}% | Ctx: ${ctxPct}%`;
         break;
       case 'detailed':
       default:
-        this.statusBarItem.text = `Gemini: ${geminiPct}% | ${gemLongTag}: ${geminiWkPct}% (${geminiWkReset}) | Claude: ${claudePct}% | Ctx: ${ctxTokensFmt} (⚡${cachePct}%)`;
+        this.statusBarItem.text = `${argonPrefix}Gemini: ${geminiPct}% | ${gemLongTag}: ${geminiWkPct}% (${geminiWkReset}) | Claude: ${claudePct}% | Ctx: ${ctxTokensFmt} (⚡${cachePct}%)`;
         break;
     }
 
@@ -77,7 +84,7 @@ export class StatusBarProvider implements vscode.Disposable {
     // Green (#89d185) for > 30%
     // Yellow (#cca700) for 10% to 30%
     // Red (#f14c4c) for < 10%
-    const minRemaining = Math.min(geminiPct, geminiWkPct, claudePct, claudeWkPct);
+    const minRemaining = Math.min(geminiPct, geminiWkPct, claudePct, claudeWkPct, argonPct ?? 100);
 
     if (minRemaining < 10) {
       this.statusBarItem.color = '#f14c4c';
@@ -106,6 +113,9 @@ export class StatusBarProvider implements vscode.Disposable {
 
     tooltipMd.appendMarkdown(`| Cota de Modelo | Restante | Renovação / Vencimento |\n`);
     tooltipMd.appendMarkdown(`| :--- | :---: | :--- |\n`);
+    if (argonPct !== undefined) {
+      tooltipMd.appendMarkdown(`| **Gemini 4 Argon (Semanal)** | **${argonPct}%** | **${argonReset}** (${argonCountdown}) |\n`);
+    }
     tooltipMd.appendMarkdown(`| **Gemini (Ciclo 5h)** | **${geminiPct}%** | Em ${gem5hStr} |\n`);
     tooltipMd.appendMarkdown(`| **Gemini (Semanal)** | **${geminiWkPct}%** | **${snapshot.geminiWeeklyResetFormatted || 'N/A'}** (${geminiWkCountdown}) |\n`);
     tooltipMd.appendMarkdown(`| **Claude (Ciclo 5h)** | **${claudePct}%** | Em ${cld5hStr} |\n`);

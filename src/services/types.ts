@@ -21,6 +21,18 @@ export interface PoolItem {
   countdownFormatted?: string;
 }
 
+export interface ModelQuotaItem {
+  modelId: string;
+  label: string;
+  group: 'gemini-argon' | 'gemini' | 'claude-gpt' | 'other';
+  tagTitle?: string;
+  isAvailable: boolean;
+  remainingPct: number;
+  resetTimeIso?: string;
+  resetTimeFormatted?: string;
+  countdownFormatted?: string;
+}
+
 export interface QuotaSnapshot {
   geminiRemainingPct: number;
   claudeRemainingPct: number;
@@ -30,6 +42,13 @@ export interface QuotaSnapshot {
   contextTokensNew: number;
   resets: ResetItem[];
   pools: PoolItem[];
+  models?: ModelQuotaItem[];
+
+  // Gemini 4 Argon dedicated pool
+  argonRemainingPct?: number;
+  argonWeeklyResetIso?: string;
+  argonWeeklyResetFormatted?: string;
+  argonWeeklyCountdown?: string;
 
   // Extended weekly & telemetry fields
   geminiWeeklyRemainingPct?: number;
@@ -98,6 +117,8 @@ export interface RawPlanStatus {
 
 export interface RawClientModelConfig {
   label?: string;
+  modelId?: string;
+  tagTitle?: string;
   modelOrAlias?: {
     model?: string;
   };

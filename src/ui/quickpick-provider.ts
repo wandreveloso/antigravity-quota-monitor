@@ -22,20 +22,31 @@ export class QuickPickProvider {
     const currentSnapshot = snapshot ?? this.metricsClient.getLastSnapshot();
     const items: MonitorQuickPickItem[] = [];
 
-    // --- SEÇÃO 1: COTAS INDIVIDUAIS E RENOVAÇÕES ---
+    // --- SEÇÃO 1: GRUPOS PRINCIPAIS DE COTAS ---
     items.push({
-      label: 'Cotas de Modelos & Prazos de Vencimento',
+      label: 'Grupos de Cotas & Prazos de Vencimento',
       kind: vscode.QuickPickItemKind.Separator,
     });
 
     if (currentSnapshot) {
+      // Gemini 4 Argon Dedicated Pool
+      if (currentSnapshot.argonRemainingPct !== undefined) {
+        const argonReset = currentSnapshot.argonWeeklyResetFormatted || 'N/A';
+        const argonCount = currentSnapshot.argonWeeklyCountdown || 'N/A';
+        items.push({
+          label: `$(star-full) Gemini 4 Argon (Pool Dedicado Pro): ${currentSnapshot.argonRemainingPct}% restante`,
+          description: `Vence em: ${argonReset} (${argonCount})`,
+          detail: 'Cota exclusiva e separada para Gemini 4 Argon e Orchestrator.',
+        });
+      }
+
       // Gemini 5h
       const geminiReset = currentSnapshot.resets.find(r => r.model.includes('Gemini (5h)'));
       const gemini5hCount = geminiReset ? this.formatCountdown(geminiReset.resetInSeconds) : 'N/A';
       items.push({
-        label: `$(hubot) Gemini (Ciclo 5h): ${currentSnapshot.geminiRemainingPct}% restante`,
+        label: `$(hubot) Gemini Models (Ciclo 5h): ${currentSnapshot.geminiRemainingPct}% restante`,
         description: `Renova em: ${gemini5hCount}`,
-        detail: 'Cota de ciclo curto para modelos Gemini Flash e Pro.',
+        detail: 'Cota de ciclo rotativo de 5h para Gemini 4 Hydrogen e Gemini 3.8 Flash.',
       });
 
       // Gemini Weekly
@@ -43,18 +54,18 @@ export class QuickPickProvider {
       const gemWkReset = currentSnapshot.geminiWeeklyResetFormatted || 'N/A';
       const gemWkCount = currentSnapshot.geminiWeeklyCountdown || 'N/A';
       items.push({
-        label: `$(calendar) Gemini Semanal: ${gemWkPct}% restante`,
+        label: `$(calendar) Gemini Models (Semanal): ${gemWkPct}% restante`,
         description: `Vence em: ${gemWkReset} (${gemWkCount})`,
-        detail: 'Cota semanal principal de modelos Gemini.',
+        detail: 'Cota semanal principal compartilhada de modelos Gemini (Hydrogen e Flash).',
       });
 
       // Claude 5h
       const claudeReset = currentSnapshot.resets.find(r => r.model.includes('Claude (5h)'));
       const claude5hCount = claudeReset ? this.formatCountdown(claudeReset.resetInSeconds) : 'N/A';
       items.push({
-        label: `$(sparkle) Claude (Ciclo 5h): ${currentSnapshot.claudeRemainingPct}% restante`,
+        label: `$(sparkle) Claude & GPT (Ciclo 5h): ${currentSnapshot.claudeRemainingPct}% restante`,
         description: `Renova em: ${claude5hCount}`,
-        detail: 'Cota para modelos Claude Sonnet, Opus e parceiros.',
+        detail: 'Cota de ciclo 5h para Claude Opus 5.5, Sonnet 5.5 e GPT-OSS 120B.',
       });
 
       // Claude Weekly
@@ -62,24 +73,51 @@ export class QuickPickProvider {
       const claudeWkReset = currentSnapshot.claudeWeeklyResetFormatted || 'N/A';
       const claudeWkCount = currentSnapshot.claudeWeeklyCountdown || 'N/A';
       items.push({
-        label: `$(calendar) Claude Semanal: ${claudeWkPct}% restante`,
+        label: `$(calendar) Claude & GPT (Semanal): ${claudeWkPct}% restante`,
         description: `Vence em: ${claudeWkReset} (${claudeWkCount})`,
-        detail: 'Cota semanal de parceiros (Anthropic / OpenAI).',
+        detail: 'Cota semanal de parceiros (Anthropic Claude 5.5 e OpenAI GPT-OSS).',
       });
-
-      // Additional model resets if available
-      for (const r of currentSnapshot.resets) {
-        if (!r.model.includes('(5h)') && !r.model.includes('(Weekly)')) {
-          items.push({
-            label: `$(server) ${r.model}`,
-            description: `Renova em: ${r.resetTimeFormatted || this.formatCountdown(r.resetInSeconds)}`,
-          });
-        }
-      }
     } else {
       items.push({
         label: '$(sync~spin) Aguardando dados das cotas...',
       });
+    }
+
+    // --- SEÇÃO 2: MODELOS INDIVIDUAIS DO ANTIGRAVITY IDE ---
+    if (currentSnapshot?.models && currentSnapshot.models.length > 0) {
+      items.push({
+        label: 'Modelos do Antigravity IDE (Status & Disponibilidade)',
+        kind: vscode.QuickPickItemKind.Separator,
+      });
+
+      for (const m of currentSnapshot.models) {
+        let icon = '$(server)';
+        if (m.label.includes('Argon')) icon = '$(star-full)';
+        else if (m.label.includes('Orchestrator')) icon = '$(organization)';
+        else if (m.label.includes('Hydrogen')) icon = '$(hubot)';
+        else if (m.label.includes('Flash')) icon = '$(zap)';
+        else if (m.label.includes('Claude') || m.label.includes('Opus') || m.label.includes('Sonnet')) icon = '$(sparkle)';
+        else if (m.label.includes('GPT')) icon = '$(globe)';
+        else if (m.label.includes('Carbon')) icon = '$(circle-slash)';
+
+        const tagText = m.tagTitle ? ` [${m.tagTitle}]` : '';
+        const statusText = m.isAvailable ? `${m.remainingPct}% disponível` : 'Indisponível no plano ativo';
+        const poolInfo = m.group === 'gemini-argon'
+          ? 'Pool Exclusivo Argon (Semanal)'
+          : m.group === 'gemini'
+          ? 'Pool Gemini Models (5h + Semanal)'
+          : m.group === 'claude-gpt'
+          ? 'Pool Claude/GPT (5h + Semanal)'
+          : 'Geral';
+
+        const resetText = m.resetTimeFormatted ? ` • Vencimento: ${m.resetTimeFormatted} (${m.countdownFormatted})` : '';
+
+        items.push({
+          label: `${icon} ${m.label}${tagText} — ${statusText}`,
+          description: poolInfo,
+          detail: m.isAvailable ? `Disponível para consumo imediato no IDE${resetText}` : 'Modelo desabilitado temporariamente ou restrito a outros planos.',
+        });
+      }
     }
 
     // --- SEÇÃO 2: POOLS PERIÓDICOS E CRÉDITOS ---

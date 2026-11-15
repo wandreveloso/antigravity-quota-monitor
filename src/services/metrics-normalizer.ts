@@ -7,6 +7,7 @@ import {
   RawBucketData,
   ResetItem,
   PoolItem,
+  ModelQuotaItem,
 } from './types';
 
 export class MetricsNormalizer {
@@ -83,7 +84,7 @@ export class MetricsNormalizer {
     const now = Date.now();
 
     // 1. Gemini Quota - Dynamically discover short and long buckets
-    const geminiGroup = groups.find(g => (g.displayName || '').toLowerCase().includes('gemini'));
+    const geminiGroup = groups.find(g => (g.displayName || '').toLowerCase().includes('gemini') && !(g.displayName || '').toLowerCase().includes('argon'));
     const geminiBuckets = geminiGroup?.buckets ?? [];
     const geminiShort =
       geminiBuckets.find(b => b.window === '5h' || (b.bucketId || '').includes('5h')) ||
@@ -106,7 +107,16 @@ export class MetricsNormalizer {
     const geminiShortWindowLabel = geminiShort?.window ? (geminiShort.window === '5h' ? '5h' : geminiShort.window === 'daily' ? 'Diário' : geminiShort.window) : '5h';
     const geminiLongWindowLabel = geminiLong?.window ? (geminiLong.window === 'weekly' ? 'Wk' : geminiLong.window === 'monthly' ? 'Mês' : geminiLong.window) : 'Wk';
 
-    // 2. Claude Quota - Dynamically discover short and long buckets
+    // 2. Gemini 4 Argon Quota - Dedicated weekly bucket for Argon / Orchestrator
+    const argonGroup = groups.find(g => (g.displayName || '').toLowerCase().includes('argon'));
+    const argonBucket = argonGroup?.buckets?.[0];
+    const argonFrac = argonBucket?.remainingFraction ?? 1.0;
+    const argonRemainingPct = Math.max(0, Math.min(100, Math.round(argonFrac * 100)));
+    const argonWeeklyResetIso = argonBucket?.resetTime;
+    const argonWeeklyResetFormatted = this.formatLocalResetShort(argonBucket?.resetTime);
+    const argonWeeklyCountdown = this.formatDurationRemaining(argonBucket?.resetTime);
+
+    // 3. Claude Quota - Dynamically discover short and long buckets
     const claudeGroup = groups.find(
       g => (g.displayName || '').toLowerCase().includes('claude') || (g.displayName || '').includes('3p')
     );
@@ -132,7 +142,7 @@ export class MetricsNormalizer {
     const claudeShortWindowLabel = claudeShort?.window ? (claudeShort.window === '5h' ? '5h' : claudeShort.window === 'daily' ? 'Diário' : claudeShort.window) : '5h';
     const claudeLongWindowLabel = claudeLong?.window ? (claudeLong.window === 'weekly' ? 'Wk' : claudeLong.window === 'monthly' ? 'Mês' : claudeLong.window) : 'Wk';
 
-    // 3. Resets
+    // 4. Resets
     const resets: ResetItem[] = [];
 
     const addReset = (name: string, bucket: RawBucketData | undefined) => {
@@ -151,6 +161,7 @@ export class MetricsNormalizer {
 
     if (geminiShort) addReset(`Gemini (${geminiShortWindowLabel})`, geminiShort);
     if (geminiLong) addReset(`Gemini (${geminiLongWindowLabel})`, geminiLong);
+    if (argonBucket) addReset('Gemini 4 Argon (Semanal)', argonBucket);
     if (claudeShort) addReset(`Claude (${claudeShortWindowLabel})`, claudeShort);
     if (claudeLong) addReset(`Claude (${claudeLongWindowLabel})`, claudeLong);
 
@@ -182,7 +193,7 @@ export class MetricsNormalizer {
       }
     }
 
-    // 4. Pools
+    // 5. Pools
     const pools: PoolItem[] = [];
 
     // Long window (Weekly/Monthly) pools
@@ -190,7 +201,7 @@ export class MetricsNormalizer {
       const frac = geminiLong.remainingFraction ?? 1.0;
       const used = Math.max(0, Math.min(100, Math.round((1 - frac) * 100)));
       pools.push({
-        name: `Gemini ${geminiLongWindowLabel} Quota`,
+        name: 'Gemini Weekly Quota',
         used,
         total: 100,
         period: geminiLong.window === 'monthly' ? 'monthly' : 'weekly',
@@ -200,11 +211,25 @@ export class MetricsNormalizer {
       });
     }
 
+    if (argonBucket) {
+      const frac = argonBucket.remainingFraction ?? 1.0;
+      const used = Math.max(0, Math.min(100, Math.round((1 - frac) * 100)));
+      pools.push({
+        name: 'Gemini 4 Argon Weekly Quota',
+        used,
+        total: 100,
+        period: 'weekly',
+        resetTimeIso: argonBucket.resetTime,
+        resetTimeFormatted: this.formatLocalResetFull(argonBucket.resetTime),
+        countdownFormatted: this.formatDurationRemaining(argonBucket.resetTime),
+      });
+    }
+
     if (claudeLong) {
       const frac = claudeLong.remainingFraction ?? 1.0;
       const used = Math.max(0, Math.min(100, Math.round((1 - frac) * 100)));
       pools.push({
-        name: `Claude ${claudeLongWindowLabel} Quota`,
+        name: 'Claude Weekly Quota',
         used,
         total: 100,
         period: claudeLong.window === 'monthly' ? 'monthly' : 'weekly',
@@ -242,6 +267,38 @@ export class MetricsNormalizer {
       });
     }
 
+    // 6. Detailed Models parsed from clientModelConfigs
+    const models: ModelQuotaItem[] = [];
+    for (const cfg of modelConfigs) {
+      const label = cfg.label || cfg.modelId || 'Unknown Model';
+      const isAvailable = cfg.tagTitle !== 'Unavailable' && cfg.quotaInfo !== null && cfg.quotaInfo !== undefined;
+      const frac = cfg.quotaInfo?.remainingFraction ?? (isAvailable ? 1.0 : 0);
+      const remainingPct = Math.max(0, Math.min(100, Math.round(frac * 100)));
+      const resetTime = cfg.quotaInfo?.resetTime;
+
+      let group: 'gemini-argon' | 'gemini' | 'claude-gpt' | 'other' = 'other';
+      const labelLower = label.toLowerCase();
+      if (labelLower.includes('argon')) {
+        group = 'gemini-argon';
+      } else if (labelLower.includes('gemini') || labelLower.includes('hydrogen') || labelLower.includes('flash')) {
+        group = 'gemini';
+      } else if (labelLower.includes('claude') || labelLower.includes('opus') || labelLower.includes('sonnet') || labelLower.includes('gpt')) {
+        group = 'claude-gpt';
+      }
+
+      models.push({
+        modelId: cfg.modelId || label,
+        label,
+        group,
+        tagTitle: cfg.tagTitle,
+        isAvailable,
+        remainingPct,
+        resetTimeIso: resetTime,
+        resetTimeFormatted: this.formatLocalResetShort(resetTime),
+        countdownFormatted: this.formatDurationRemaining(resetTime),
+      });
+    }
+
     const cacheHitPct =
       contextMetrics.totalTokens > 0
         ? Math.round((contextMetrics.cachedTokens / contextMetrics.totalTokens) * 100)
@@ -256,6 +313,12 @@ export class MetricsNormalizer {
       contextTokensNew: contextMetrics.newTokens,
       resets,
       pools,
+      models,
+
+      argonRemainingPct,
+      argonWeeklyResetIso,
+      argonWeeklyResetFormatted,
+      argonWeeklyCountdown,
 
       geminiWeeklyRemainingPct,
       geminiWeeklyResetIso,
