@@ -122,6 +122,16 @@ export class StatusBarProvider implements vscode.Disposable {
     tooltipMd.appendMarkdown(`| **Claude (Semanal)** | **${claudeWkPct}%** | **${snapshot.claudeWeeklyResetFormatted || 'N/A'}** (${snapshot.claudeWeeklyCountdown || 'N/A'}) |\n\n`);
 
     tooltipMd.appendMarkdown(`---\n\n`);
+    tooltipMd.appendMarkdown(`#### 💡 Dicas de Modelos & Esforço Recomendado\n`);
+    tooltipMd.appendMarkdown(`- 💎 **Gemini 4 Argon** *(Esforço: Médio/Alto)*: Raciocínio profundo e arquiteturas complexas (cota exclusiva Pro).\n`);
+    tooltipMd.appendMarkdown(`- 🧪 **Gemini 4 Hydrogen** *(Esforço: Médio)*: Cavalo de batalha diário para código, testes e refatorações gerais.\n`);
+    tooltipMd.appendMarkdown(`- 🤖 **Orchestrator (Argon)** *(Esforço: Automático)*: Orquestração multi-agente, subagentes e planejamento de alto nível.\n`);
+    tooltipMd.appendMarkdown(`- ⚡ **Gemini 3.8 Flash** *(Esforço: Alto)*: Velocidade máxima para correções rápidas, boilerplates e tarefas simples.\n`);
+    tooltipMd.appendMarkdown(`- 🎭 **Claude Opus 5.5** *(Esforço: Médio/Alto)*: Análise conceitual crítica, auditoria minuciosa e corner-cases difíceis.\n`);
+    tooltipMd.appendMarkdown(`- 🎯 **Claude Sonnet 5.5** *(Esforço: Médio)*: Precisão cirúrgica em sintaxe, TypeScript/UI e zero regressões.\n`);
+    tooltipMd.appendMarkdown(`- 🌐 **GPT-OSS 120B** *(Esforço: Médio)*: Excelente segunda opinião e validação cruzada independente de código.\n\n`);
+
+    tooltipMd.appendMarkdown(`---\n\n`);
     tooltipMd.appendMarkdown(`#### 🧠 Janela de Contexto (Sessão Ativa)\n`);
     tooltipMd.appendMarkdown(`- **Total**: ${snapshot.contextTokensTotal.toLocaleString()} tokens (${ctxPct}% do teto de 1M)\n`);
     tooltipMd.appendMarkdown(`- **⚡ Cache Read**: ${snapshot.contextTokensCached.toLocaleString()} tokens (${cachePct}% reaproveitado)\n`);

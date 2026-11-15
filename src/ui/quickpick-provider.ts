@@ -100,6 +100,25 @@ export class QuickPickProvider {
         else if (m.label.includes('GPT')) icon = '$(globe)';
         else if (m.label.includes('Carbon')) icon = '$(circle-slash)';
 
+        let tip = '';
+        if (m.label.includes('Argon') && !m.label.includes('Orchestrator')) {
+          tip = '💡 Dica: Esforço Médio/Alto para raciocínio profundo e arquiteturas complexas.';
+        } else if (m.label.includes('Orchestrator')) {
+          tip = '💡 Dica: Esforço Automático para liderar subagentes e planejamento de alto nível.';
+        } else if (m.label.includes('Hydrogen')) {
+          tip = '💡 Dica: Esforço Médio para o dia a dia, multi-arquivos, testes e refatorações.';
+        } else if (m.label.includes('Flash')) {
+          tip = '💡 Dica: Esforço Alto para velocidade máxima em correções e snippets rápidos.';
+        } else if (m.label.includes('Opus 5.5')) {
+          tip = '💡 Dica: Esforço Médio/Alto para auditorias minuciosas e corner-cases difíceis.';
+        } else if (m.label.includes('Sonnet 5.5')) {
+          tip = '💡 Dica: Esforço Médio para precisão cirúrgica em TypeScript, UI e zero regressões.';
+        } else if (m.label.includes('GPT-OSS')) {
+          tip = '💡 Dica: Esforço Médio para segunda opinião e validação cruzada independente.';
+        } else if (m.label.includes('Carbon')) {
+          tip = '⚠️ Dica: Modelo desabilitado temporariamente pela Google.';
+        }
+
         const tagText = m.tagTitle ? ` [${m.tagTitle}]` : '';
         const statusText = m.isAvailable ? `${m.remainingPct}% disponível` : 'Indisponível no plano ativo';
         const poolInfo = m.group === 'gemini-argon'
@@ -110,12 +129,12 @@ export class QuickPickProvider {
           ? 'Pool Claude/GPT (5h + Semanal)'
           : 'Geral';
 
-        const resetText = m.resetTimeFormatted ? ` • Vencimento: ${m.resetTimeFormatted} (${m.countdownFormatted})` : '';
+        const resetText = m.resetTimeFormatted ? ` • Vence: ${m.resetTimeFormatted} (${m.countdownFormatted})` : '';
 
         items.push({
           label: `${icon} ${m.label}${tagText} — ${statusText}`,
           description: poolInfo,
-          detail: m.isAvailable ? `Disponível para consumo imediato no IDE${resetText}` : 'Modelo desabilitado temporariamente ou restrito a outros planos.',
+          detail: m.isAvailable ? `${tip} • ${poolInfo}${resetText}` : tip,
         });
       }
     }
