@@ -92,16 +92,23 @@ export class QuickPickProvider {
 
       for (const m of currentSnapshot.models) {
         let icon = '$(server)';
-        if (m.label.includes('Argon')) icon = '$(star-full)';
+        if (m.label.includes('Neon')) icon = '$(flame)';
+        else if (m.label.includes('Carbon')) icon = m.isAvailable ? '$(layers)' : '$(circle-slash)';
+        else if (m.label.includes('Argon')) icon = '$(star-full)';
         else if (m.label.includes('Orchestrator')) icon = '$(organization)';
         else if (m.label.includes('Hydrogen')) icon = '$(hubot)';
         else if (m.label.includes('Flash')) icon = '$(zap)';
         else if (m.label.includes('Claude') || m.label.includes('Opus') || m.label.includes('Sonnet')) icon = '$(sparkle)';
         else if (m.label.includes('GPT')) icon = '$(globe)';
-        else if (m.label.includes('Carbon')) icon = '$(circle-slash)';
 
         let tip = '';
-        if (m.label.includes('Argon') && !m.label.includes('Orchestrator')) {
+        if (m.label.includes('Neon') && !m.label.includes('Orchestrator')) {
+          tip = '💡 Dica: Esforço Médio/Alto para arquitetura de ponta e tarefas mais complexas.';
+        } else if (m.label.includes('Carbon') && !m.label.includes('Orchestrator')) {
+          tip = m.isAvailable
+            ? '💡 Dica: Esforço Médio para raciocínio avançado e refatorações pesadas.'
+            : '⚠️ Dica: Modelo desabilitado temporariamente pela Google.';
+        } else if (m.label.includes('Argon') && !m.label.includes('Orchestrator')) {
           tip = '💡 Dica: Esforço Médio/Alto para raciocínio profundo e arquiteturas complexas.';
         } else if (m.label.includes('Orchestrator')) {
           tip = '💡 Dica: Esforço Automático para liderar subagentes e planejamento de alto nível.';
@@ -115,8 +122,6 @@ export class QuickPickProvider {
           tip = '💡 Dica: Esforço Médio para precisão cirúrgica em TypeScript, UI e zero regressões.';
         } else if (m.label.includes('GPT-OSS')) {
           tip = '💡 Dica: Esforço Médio para segunda opinião e validação cruzada independente.';
-        } else if (m.label.includes('Carbon')) {
-          tip = '⚠️ Dica: Modelo desabilitado temporariamente pela Google.';
         }
 
         const tagText = m.tagTitle ? ` [${m.tagTitle}]` : '';

@@ -1,9 +1,18 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import * as fs from 'fs';
+import * as path from 'path';
 import * as http from 'http';
 import * as https from 'https';
 import * as os from 'os';
 import { ProcessInfo } from './types';
+
+interface HubDaemonFile {
+  pid?: number;
+  httpPort?: number;
+  httpsPort?: number;
+  csrfToken?: string;
+}
 
 const execAsync = promisify(exec);
 
@@ -31,6 +40,28 @@ export class ProcessDetector {
       this.cachedInfo = null;
     }
 
+    // 1. Primary (Antigravity CLI 2.35+): read ~/.gemini/antigravity/daemon/hub_*.json
+    const daemonCandidate = await this.detectFromDaemonFiles();
+    if (daemonCandidate) {
+      this.cachedInfo = daemonCandidate;
+      return this.cachedInfo;
+    }
+
+    // 2. Secondary: check environment variables if running inside ExtensionHost
+    const envToken = process.env.ANTIGRAVITY_SERVER_CSRF_TOKEN;
+    const envAddr = process.env.ANTIGRAVITY_LS_ADDRESS;
+    if (envToken && envAddr) {
+      const portMatch = envAddr.match(/:(\d+)$/);
+      if (portMatch) {
+        const port = parseInt(portMatch[1], 10);
+        if (await this.testConnection(port, envToken, 'http')) {
+          this.cachedInfo = { pid: 0, port, csrfToken: envToken, protocol: 'http' };
+          return this.cachedInfo;
+        }
+      }
+    }
+
+    // 3. Fallback: scan OS process list (legacy --csrf_token CLI args)
     const platform = os.platform();
     let candidates: { pid: number; portFromArgs: number; csrfToken: string }[] = [];
 
@@ -79,6 +110,69 @@ export class ProcessDetector {
     }
 
     return null;
+  }
+
+  private async detectFromDaemonFiles(): Promise<ProcessInfo | null> {
+    try {
+      const appDataDir =
+        process.env.ANTIGRAVITY_APP_DATA_DIR || path.join(os.homedir(), '.gemini', 'antigravity');
+      const daemonDir = path.join(appDataDir, 'daemon');
+      const entries = await fs.promises.readdir(daemonDir);
+      const hubFiles = entries.filter(name => name.startsWith('hub_') && name.endsWith('.json'));
+      if (hubFiles.length === 0) {
+        return null;
+      }
+
+      const fileStats = await Promise.all(
+        hubFiles.map(async name => {
+          const fullPath = path.join(daemonDir, name);
+          try {
+            const stat = await fs.promises.stat(fullPath);
+            return { fullPath, mtimeMs: stat.mtimeMs };
+          } catch {
+            return { fullPath, mtimeMs: 0 };
+          }
+        })
+      );
+
+      // Try most recently updated hub file first
+      fileStats.sort((a, b) => b.mtimeMs - a.mtimeMs);
+
+      for (const item of fileStats) {
+        try {
+          const raw = await fs.promises.readFile(item.fullPath, 'utf8');
+          const parsed = JSON.parse(raw) as HubDaemonFile;
+          const csrfToken = parsed.csrfToken;
+          if (!csrfToken) {
+            continue;
+          }
+
+          if (parsed.httpPort && (await this.testConnection(parsed.httpPort, csrfToken, 'http'))) {
+            return {
+              pid: parsed.pid ?? 0,
+              port: parsed.httpPort,
+              csrfToken,
+              protocol: 'http',
+            };
+          }
+
+          if (parsed.httpsPort && (await this.testConnection(parsed.httpsPort, csrfToken, 'https'))) {
+            return {
+              pid: parsed.pid ?? 0,
+              port: parsed.httpsPort,
+              csrfToken,
+              protocol: 'https',
+            };
+          }
+        } catch {
+          // Ignore malformed or stale daemon file
+        }
+      }
+
+      return null;
+    } catch {
+      return null;
+    }
   }
 
   private async detectUnix(): Promise<{ pid: number; portFromArgs: number; csrfToken: string }[]> {

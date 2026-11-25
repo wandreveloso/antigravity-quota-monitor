@@ -123,7 +123,9 @@ export class StatusBarProvider implements vscode.Disposable {
 
     tooltipMd.appendMarkdown(`---\n\n`);
     tooltipMd.appendMarkdown(`#### 💡 Dicas de Modelos & Esforço Recomendado\n`);
-    tooltipMd.appendMarkdown(`- 💎 **Gemini 4 Argon** *(Esforço: Médio/Alto)*: Raciocínio profundo e arquiteturas complexas (cota exclusiva Pro).\n`);
+    tooltipMd.appendMarkdown(`- 🔥 **Gemini 4 Neon** *(Esforço: Médio/Alto)*: Modelo de ponta para arquiteturas e desafios complexos.\n`);
+    tooltipMd.appendMarkdown(`- 🧱 **Gemini 4 Carbon** *(Esforço: Médio)*: Raciocínio avançado e refatorações pesadas.\n`);
+    tooltipMd.appendMarkdown(`- 💎 **Gemini 4 Argon** *(Esforço: Médio/Alto)*: Raciocínio profundo e arquiteturas complexas.\n`);
     tooltipMd.appendMarkdown(`- 🧪 **Gemini 4 Hydrogen** *(Esforço: Médio)*: Cavalo de batalha diário para código, testes e refatorações gerais.\n`);
     tooltipMd.appendMarkdown(`- 🤖 **Orchestrator (Argon)** *(Esforço: Automático)*: Orquestração multi-agente, subagentes e planejamento de alto nível.\n`);
     tooltipMd.appendMarkdown(`- ⚡ **Gemini 3.8 Flash** *(Esforço: Alto)*: Velocidade máxima para correções rápidas, boilerplates e tarefas simples.\n`);

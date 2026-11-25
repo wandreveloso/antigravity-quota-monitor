@@ -107,14 +107,15 @@ export class MetricsNormalizer {
     const geminiShortWindowLabel = geminiShort?.window ? (geminiShort.window === '5h' ? '5h' : geminiShort.window === 'daily' ? 'Diário' : geminiShort.window) : '5h';
     const geminiLongWindowLabel = geminiLong?.window ? (geminiLong.window === 'weekly' ? 'Wk' : geminiLong.window === 'monthly' ? 'Mês' : geminiLong.window) : 'Wk';
 
-    // 2. Gemini 4 Argon Quota - Dedicated weekly bucket for Argon / Orchestrator
+    // 2. Gemini 4 Argon Quota - Dedicated weekly bucket for Argon / Orchestrator (if separated on plan)
     const argonGroup = groups.find(g => (g.displayName || '').toLowerCase().includes('argon'));
     const argonBucket = argonGroup?.buckets?.[0];
-    const argonFrac = argonBucket?.remainingFraction ?? 1.0;
-    const argonRemainingPct = Math.max(0, Math.min(100, Math.round(argonFrac * 100)));
+    const argonRemainingPct = argonBucket
+      ? Math.max(0, Math.min(100, Math.round((argonBucket.remainingFraction ?? 1.0) * 100)))
+      : undefined;
     const argonWeeklyResetIso = argonBucket?.resetTime;
-    const argonWeeklyResetFormatted = this.formatLocalResetShort(argonBucket?.resetTime);
-    const argonWeeklyCountdown = this.formatDurationRemaining(argonBucket?.resetTime);
+    const argonWeeklyResetFormatted = argonBucket ? this.formatLocalResetShort(argonBucket.resetTime) : undefined;
+    const argonWeeklyCountdown = argonBucket ? this.formatDurationRemaining(argonBucket.resetTime) : undefined;
 
     // 3. Claude Quota - Dynamically discover short and long buckets
     const claudeGroup = groups.find(
@@ -278,9 +279,16 @@ export class MetricsNormalizer {
 
       let group: 'gemini-argon' | 'gemini' | 'claude-gpt' | 'other' = 'other';
       const labelLower = label.toLowerCase();
-      if (labelLower.includes('argon')) {
+      if (labelLower.includes('argon') && argonBucket) {
         group = 'gemini-argon';
-      } else if (labelLower.includes('gemini') || labelLower.includes('hydrogen') || labelLower.includes('flash')) {
+      } else if (
+        labelLower.includes('gemini') ||
+        labelLower.includes('neon') ||
+        labelLower.includes('carbon') ||
+        labelLower.includes('argon') ||
+        labelLower.includes('hydrogen') ||
+        labelLower.includes('flash')
+      ) {
         group = 'gemini';
       } else if (labelLower.includes('claude') || labelLower.includes('opus') || labelLower.includes('sonnet') || labelLower.includes('gpt')) {
         group = 'claude-gpt';
